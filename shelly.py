@@ -1,5 +1,8 @@
-import turtle
+#import turtle
+import time
 import numpy as np
+import rcpy
+import rcpy.mpu9250 as mpu9250
 
 class BaseTurtle:
 
@@ -37,7 +40,9 @@ class Shelly(BaseTurtle):
 
     def start(self):
         rcpy.set_state(rcpy.RUNNING)
+        time.sleep(.5)
         mpu9250.initialize(enable_dmp = True, dmp_sample_rate = 100, enable_fusion = True, enable_magnetometer = True)
+        time.sleep(.5)
 
     def reset(self):
         self.xyz = [0,0,0]
@@ -53,10 +58,11 @@ class Shelly(BaseTurtle):
 
 class TurtleEnv:
 
-    def __init__(self, turtle = VirtualTurtle(), turn = 45, distance = 10):
+    def __init__(self, turtle = Shelly(), turn = 45, distance = 10):
         self.turtle = turtle
         self.turn_degrees = turn
         self.move_distance = distance
+        self.turtle.start()
 
     def action_space(self):
         return self.actions
@@ -99,6 +105,7 @@ class TurtleEnv:
             print(q)
 
 s = TurtleEnv()
+
 s.reset()
 s.learn()
-turtle.done()
+s.turtle.done()
