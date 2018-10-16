@@ -3,6 +3,7 @@ import time
 import numpy as np
 import rcpy
 import rcpy.mpu9250 as mpu9250
+from stepper import Stepper
 
 class BaseTurtle:
 
@@ -38,6 +39,9 @@ class VirtualTurtle(BaseTurtle):
 
 class Shelly(BaseTurtle):
 
+    bipolar1 = Stepper()
+    bipolar2 = Stepper()
+
     def start(self):
         rcpy.set_state(rcpy.RUNNING)
         time.sleep(.5)
@@ -49,11 +53,13 @@ class Shelly(BaseTurtle):
         return 0
 
     def move(self, distance):
-        # GPIO code to move stepper
+        self.bipolar1.move(distance)
+        self.bipolar2.move(distance)
         self.xyz = (distance, 0, 0)
 
     def turn(self, degrees):
-        # GPIO code to move stepper
+        self.bipolar1.move(degrees)
+        self.bipolar2.move(-degrees)
         self.xyz = (0, 0, mpu9250.read()['tb'][2] * 57.29578)
 
 class TurtleEnv:
@@ -76,10 +82,9 @@ class TurtleEnv:
 
     def step(self, action):
         action_vector = BaseTurtle.actions[action]
-        if action_vector[0] == action_vector[1]:
-            self.turtle.move(action_vector[0] * self.move_distance)
-        else:
-            self.turtle.turn(action_vector[0] * self.turn_degrees)
+        print(action_vector)
+        self.turtle.bipolar1.move(action_vector[0])
+        self.turtle.bipolar2.move(action_vector[1])
         xyz = self.turtle.get_xyz()
         reward = xyz[0] - abs(xyz[2])
         self.count += 1

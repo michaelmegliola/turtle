@@ -9,6 +9,7 @@ states = [ (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0) 
 #states = [ (1, -1), (-1, -1), (-1, 1), (1, 1)]
 
 direction = 1
+direction2 = -1
 direction_count = 0
 step_interval = .003
 reverse_count = 800
@@ -19,6 +20,8 @@ try:
         if (time.time() >= t0):
             motor.motor1.set(states[count][0])
             motor.motor2.set(states[count][1])
+            motor.motor3.set(states[7-count][0])
+            motor.motor4.set(states[7-count][1])
             count += direction
             if count == len(states):
                 count = 0
