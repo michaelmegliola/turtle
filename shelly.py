@@ -6,6 +6,10 @@ import rcpy.mpu9250 as mpu9250
 from stepper import Stepper
 import rcpy.motor as motor
 
+X = 0
+Y = 1
+Z = 2
+
 class BaseTurtle:
 
     actions = ((1,1),(1,-1),(-1,1),(-1,-1))
@@ -43,10 +47,12 @@ class Shelly(BaseTurtle):
     bipolar1 = Stepper()
     bipolar2 = Stepper(2)
 
+    def __init__(self):
+        self.readingarray = [0,0,0,0,0,0,0,0,0,0,0,0]
+
     def start(self):
         rcpy.set_state(rcpy.RUNNING)
         time.sleep(.5)
-        #mpu9250.initialize(enable_dmp = True, dmp_sample_rate = 100, enable_fusion = False, enable_magnetometer = True)
         mpu9250.initialize(enable_magnetometer = False)
         time.sleep(.5)
 
@@ -55,17 +61,40 @@ class Shelly(BaseTurtle):
         return 0
 
     def move(self, action_vector):
-        t0 = time.time() + .5
-        t1 = time.time() + .05
-        max_xyz = [0, 0, 0]
-        #motor.motor1.set(action_vector[0] * .25)
-        #motor.motor2.set(action_vector[1] * .26)
-        while time.time() <= t0:
-            if time.time() > t1:
-                max_xyz.append(mpu9250.read())
-                t1 = time.time() + .05
-            print('Reading array length: ',len(max_xyz))
-        time.sleep(.25)
+        
+        t_0 = time.time()
+        t_stop = t_0 + 0.50
+        t_sensing = t_0 + 0.20  # was .25
+        t1 = t_0
+        
+        max_accel = [0,0,0]
+        min_accel = [0,0,0]
+        
+        max_gyro = [0,0,0]
+        min_gyro = [0,0,0]
+        motor.motor1.set(action_vector[0] * 0.25)
+        motor.motor2.set(action_vector[1] * 0.26)
+        count = 0
+        while t1 <= t_stop:
+            if t1 <= t_sensing:
+                data = mpu9250.read()
+                max_accel = np.maximum(max_accel, data['accel'])
+                min_accel = np.minimum(min_accel, data['accel'])
+                max_gyro = np.maximum(max_gyro, data['gyro'])
+                min_gyro = np.minimum(min_gyro, data['gyro'])
+                count += 1
+            t1 = time.time()
+        
+        motor.motor1.set(action_vector[0] * 0.00)
+        motor.motor2.set(action_vector[1] * 0.00)
+        if max_gyro[Z] > 150.0:
+            return 'TL'
+        elif min_gyro[Z] < -150.0:
+            return 'TR'
+        elif max_accel[Y] > abs(min_accel[Y]):
+            return 'F'
+        else:
+            return 'R'
     
     def stop(self):
         rcpy.exit()
@@ -91,12 +120,10 @@ class TurtleEnv:
 
     def step(self, action):
         action_vector = BaseTurtle.actions[action]
-        print(action_vector)
-        self.turtle.move(action_vector)
-        xyz = self.turtle.get_xyz()
-        reward = xyz[0] - abs(xyz[2])
+        movement = self.turtle.move(action_vector)
+        reward = 1 if movement == 'F' else 0
         self.count += 1
-        return action, reward, self.count > 100
+        return action, reward, reward > 0
 
     def learn(self):
         explore = 1.0
@@ -123,18 +150,17 @@ s = TurtleEnv()
 s.turtle.start()
 time.sleep(1)
 s.reset()
-#s.learn()
-
-direction = 2
-for x in range(10):
-    s.step(direction)
-    t0 = time.time() + 0.5
-    for i in range(50):
-        if time.time() > t0:
-            #print('Y accel:', mpu9250.read()['accel'][1])
-            t0 = time.time() + 0.1
-    if direction == 2:
-        direction = 0
-    else:
-        direction = 2
+s.learn()
 s.turtle.stop()
+
+'''direction = 0
+for x in range(6):
+    s.step(direction)
+    if direction == 0:
+        direction = 3
+    else:
+        direction = 0
+time.sleep(1)
+s.turtle.stop()
+time.sleep(1)
+'''
