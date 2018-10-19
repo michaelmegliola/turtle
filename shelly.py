@@ -4,6 +4,7 @@ import numpy as np
 import rcpy
 import rcpy.mpu9250 as mpu9250
 from stepper import Stepper
+import rcpy.motor as motor
 
 class BaseTurtle:
 
@@ -29,38 +30,46 @@ class VirtualTurtle(BaseTurtle):
         self.xyz = [0,0,0]
         return 0
 
-    def move(self, distance):
-        turtle.forward(distance)
-        self.xyz = (distance, 0, 0)
-
-    def turn(self, degrees):
-        turtle.left(degrees)
-        self.xyz = (0, 0, degrees)
+    def move(self, action_vector):
+        if action_vector[0] == action_vector[1]:
+            turtle.forward(action_vector[0])
+            self.xyz = (10, 0, 0)
+        else:
+            turtle.left(action_vector[0])
+            self.xyz = (0, 0, action_vector[0]*45)
 
 class Shelly(BaseTurtle):
 
     bipolar1 = Stepper()
-    bipolar2 = Stepper()
+    bipolar2 = Stepper(2)
 
     def start(self):
         rcpy.set_state(rcpy.RUNNING)
         time.sleep(.5)
-        mpu9250.initialize(enable_dmp = True, dmp_sample_rate = 100, enable_fusion = True, enable_magnetometer = True)
+        #mpu9250.initialize(enable_dmp = True, dmp_sample_rate = 100, enable_fusion = False, enable_magnetometer = True)
+        mpu9250.initialize(enable_magnetometer = False)
         time.sleep(.5)
 
     def reset(self):
         self.xyz = [0,0,0]
         return 0
 
-    def move(self, distance):
-        self.bipolar1.move(distance)
-        self.bipolar2.move(distance)
-        self.xyz = (distance, 0, 0)
+    def move(self, action_vector):
+        t0 = time.time() + .5
+        t1 = time.time() + .05
+        max_xyz = [0, 0, 0]
+        #motor.motor1.set(action_vector[0] * .25)
+        #motor.motor2.set(action_vector[1] * .26)
+        while time.time() <= t0:
+            if time.time() > t1:
+                max_xyz.append(mpu9250.read())
+                t1 = time.time() + .05
+            print('Reading array length: ',len(max_xyz))
+        time.sleep(.25)
+    
+    def stop(self):
+        rcpy.exit()
 
-    def turn(self, degrees):
-        self.bipolar1.move(degrees)
-        self.bipolar2.move(-degrees)
-        self.xyz = (0, 0, mpu9250.read()['tb'][2] * 57.29578)
 
 class TurtleEnv:
 
@@ -83,8 +92,7 @@ class TurtleEnv:
     def step(self, action):
         action_vector = BaseTurtle.actions[action]
         print(action_vector)
-        self.turtle.bipolar1.move(action_vector[0])
-        self.turtle.bipolar2.move(action_vector[1])
+        self.turtle.move(action_vector)
         xyz = self.turtle.get_xyz()
         reward = xyz[0] - abs(xyz[2])
         self.count += 1
@@ -108,9 +116,25 @@ class TurtleEnv:
                 state = obs
             explore *= 0.9
             print(q)
+    
+
 
 s = TurtleEnv()
-
+s.turtle.start()
+time.sleep(1)
 s.reset()
-s.learn()
-s.turtle.done()
+#s.learn()
+
+direction = 2
+for x in range(10):
+    s.step(direction)
+    t0 = time.time() + 0.5
+    for i in range(50):
+        if time.time() > t0:
+            #print('Y accel:', mpu9250.read()['accel'][1])
+            t0 = time.time() + 0.1
+    if direction == 2:
+        direction = 0
+    else:
+        direction = 2
+s.turtle.stop()
