@@ -150,17 +150,7 @@ s = TurtleEnv()
 s.turtle.start()
 time.sleep(1)
 s.reset()
-s.learn()
+#s.learn()
+for I in range(100):
+    s.step(0)
 s.turtle.stop()
-
-'''direction = 0
-for x in range(6):
-    s.step(direction)
-    if direction == 0:
-        direction = 3
-    else:
-        direction = 0
-time.sleep(1)
-s.turtle.stop()
-time.sleep(1)
-'''
