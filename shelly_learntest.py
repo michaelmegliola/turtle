@@ -64,11 +64,12 @@ class Shelly(BaseTurtle):
         
         t_0 = time.time()
         t_stop = t_0 + 0.50
-        t_sensing = t_0 + 0.20  # was .25
+        t_sensing = t_0 + 0.10  # was .25
         t1 = t_0
         
         max_accel = [0,0,0]
         min_accel = [0,0,0]
+        sum_accel = [0,0,0]
         
         max_gyro = [0,0,0]
         min_gyro = [0,0,0]
@@ -80,6 +81,7 @@ class Shelly(BaseTurtle):
                 data = mpu9250.read()
                 max_accel = np.maximum(max_accel, data['accel'])
                 min_accel = np.minimum(min_accel, data['accel'])
+                sum_accel = np.add(data['accel'], sum_accel)
                 max_gyro = np.maximum(max_gyro, data['gyro'])
                 min_gyro = np.minimum(min_gyro, data['gyro'])
                 count += 1
@@ -87,11 +89,11 @@ class Shelly(BaseTurtle):
         
         motor.motor1.set(action_vector[0] * 0.00)
         motor.motor2.set(action_vector[1] * 0.00)
-        if max_gyro[Z] > 150.0:
+        if max_gyro[Z] > 100.0:
             return 'TL'
-        elif min_gyro[Z] < -150.0:
+        elif min_gyro[Z] < -100.0: # was -150
             return 'TR'
-        elif max_accel[Y] > abs(min_accel[Y]):
+        elif sum_accel[1] > 0:
             return 'F'
         else:
             return 'R'
@@ -121,6 +123,7 @@ class TurtleEnv:
     def step(self, action):
         action_vector = BaseTurtle.actions[action]
         movement = self.turtle.move(action_vector)
+        print(movement)
         reward = 1 if movement == 'F' else 0
         self.count += 1
         return action, reward, reward > 0
@@ -151,5 +154,4 @@ s.turtle.start()
 time.sleep(1)
 s.reset()
 s.learn()
-
 s.turtle.stop()
