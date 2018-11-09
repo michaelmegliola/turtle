@@ -7,8 +7,12 @@ import time
 class Stepper:
     states = [ (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0) ]
     #states = [ (1, -1), (-1, -1), (-1, 1), (1, 1)]
-
+    step_interval = 0.009
+    degrees_per_step = 0.9
+    
     def __init__(self, stepper_index = 1):
+        self.position = 0
+        self.n = 0
         if stepper_index == 1:
             self.output1 = motor.motor1
             self.output2 = motor.motor2
@@ -25,21 +29,17 @@ class Stepper:
     def reset(self):
         pass
 
+    def move(self, degrees):
+        t0 = time.time() + Stepper.step_interval
+        steps = int(round(degrees)/Stepper.degrees_per_step) # 0.9 degrees per step
+        
+        for x in range(abs(steps)):
+            while (time.time() < t0):
+                pass
+            self.output1.set(Stepper.states[self.n][0])
+            self.output2.set(Stepper.states[self.n][1])
+            self.n += 1 if degrees > 0 else -1
+            self.n %= len(Stepper.states)
+            t0 = time.time() + Stepper.step_interval
 
-    def move(self, direction):
-        step_interval = .003
-        step_count = abs(direction) * 100
-        t0 = time.time() + step_interval
-        loop_count = 0
-        step = 0
-        while loop_count < step_count:
-            if (time.time() >= t0):
-                self.output1.set(self.states[count][0])
-                self.output2.set(selfstates[count][1])
-                step += direction
-                if step == len(self.states):
-                    step = 0
-                if step == -1:
-                    step = len(self.states) -1
-                t0 = time.time() + step_interval
-                loop_count += 1
+        self.position += steps * Stepper.degrees_per_step
