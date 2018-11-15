@@ -45,9 +45,6 @@ class VirtualTurtle(BaseTurtle):
 
 class Shelly(BaseTurtle):
 
-    def __init__(self):
-        self.readingarray = [0,0,0,0,0,0,0,0,0,0,0,0]
-
     def start(self):
         rcpy.set_state(rcpy.RUNNING)
         time.sleep(.5)
@@ -97,6 +94,15 @@ class Shelly(BaseTurtle):
     def stop(self):
         rcpy.exit()
 
+class Ostritch(Shelly):
+
+    def __init__(self):
+        self.observation = [(0,0)]
+        self.lidar = LidarSensor(25, 15)
+    
+    def make_observation(self):
+        self.observation = self.lidar.get_observation()
+    
 
 class TurtleEnv:
 
@@ -144,11 +150,17 @@ class TurtleEnv:
     
 
 
-s = TurtleEnv()
+'''s = TurtleEnv()
 s.turtle.start()
 time.sleep(1)
 s.reset()
 s.learn()
+s.turtle.stop()'''
+
+s = TurtleEnv(turtle = Ostritch(), turn = 45, distance = 10)
+time.sleep(1)
+s.reset()
+s.turtle.make_observation()
+for obs in s.turtle.observation:
+    print('Heading = {0:+.3f}'.format(obs[0]),'Distance = {0:+.1f}'.format(obs[1]))
 s.turtle.stop()
-
-
