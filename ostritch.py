@@ -13,7 +13,8 @@ Z = 2
 
 class BaseTurtle:
 
-    actions = ((1,1),(1,-1),(-1,1),(-1,-1))
+    #actions = ((1,1),(1,-1),(-1,1),(-1,-1))
+    actions = ((1,1),(-1,-1))
 
     def __init__(self):
         self.xyz = [0,0,0]
@@ -58,7 +59,7 @@ class Shelly(BaseTurtle):
     def move(self, action_vector):
         
         t_0 = time.time()
-        t_stop = t_0 + 0.50
+        t_stop = t_0 + 0.25
         t_sensing = t_0 + 0.20  # was .25
         t1 = t_0
         
@@ -97,12 +98,14 @@ class Shelly(BaseTurtle):
 class Ostritch(Shelly):
 
     def __init__(self):
-        self.observation = [(0,0)]
-        self.lidar = LidarSensor(25, 15)
+        self.prev_nearfield_count = 0
+        self.prev_nearfield_avg_distance = 0
+        self.lidar = LidarSensor(8, 45)
+        
     
-    def make_observation(self):
-        self.observation = self.lidar.get_observation()
-    
+    def get_observation(self):
+        return self.lidar.get_observation()
+        
 
 class TurtleEnv:
 
@@ -123,17 +126,25 @@ class TurtleEnv:
         return np.random.randint(len(BaseTurtle.actions))
 
     def step(self, action):
-        action_vector = BaseTurtle.actions[action]
-        movement = self.turtle.move(action_vector)
-        reward = 1 if movement == 'F' else 0
+        reward = 0
+        nearfield_count = 0
+        nearfield_total = 0
+        minimum = 9999
+        angle_min = -1
+        self.turtle.move(BaseTurtle.actions[action])
+        observations = self.turtle.get_observation()
+        state = np.argmin(observations[...,1])
+        closest_obs = observations[state]
+        print(closest_obs)
+        reward = 180 - closest_obs[0]
         self.count += 1
-        return action, reward, reward > 0
+        return state, reward, self.count > 12
 
     def learn(self):
-        explore = 1.0
+        explore = 0.4
         alpha = 0.1
         gamma = 0.9
-        q = np.zeros((len(BaseTurtle.actions),len(BaseTurtle.actions)))
+        q = np.zeros((8, len(BaseTurtle.actions)))
         for n in range(100):
             state = self.reset()
             done = False
@@ -143,24 +154,24 @@ class TurtleEnv:
                 else:
                     action = np.argmax(q[state])
                 obs, reward, done = s.step(action)
-                q[state][action] = (1-alpha) * q[state][action] + alpha * reward
+                q[obs][action] = (1-alpha) * q[state][action] + alpha * reward
                 state = obs
-            explore *= 0.9
+            explore *= 0.99
             print(q)
     
 
 
-'''s = TurtleEnv()
+s = TurtleEnv(turtle = Ostritch(), turn = 45, distance = 10)
 s.turtle.start()
 time.sleep(1)
 s.reset()
 s.learn()
-s.turtle.stop()'''
+s.turtle.stop()
 
-s = TurtleEnv(turtle = Ostritch(), turn = 45, distance = 10)
+'''s = TurtleEnv(turtle = Ostritch(), turn = 45, distance = 10)
 time.sleep(1)
 s.reset()
 s.turtle.make_observation()
 for obs in s.turtle.observation:
     print('Heading = {0:+.3f}'.format(obs[0]),'Distance = {0:+.1f}'.format(obs[1]))
-s.turtle.stop()
+s.turtle.stop()'''

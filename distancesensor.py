@@ -1,4 +1,5 @@
 from stepper import *
+import numpy as np
 import VL53L1X
 
 class DistanceSensor:
@@ -25,7 +26,7 @@ class DistanceSensor:
             observation.append(self.get_reading(target))
             target += self.sweep_degrees
         self.seek_position(0)
-        return observation
+        return np.array(observation)
         
 class LidarSensor(DistanceSensor):
     
