@@ -59,7 +59,7 @@ class Shelly(BaseTurtle):
     def move(self, action_vector):
         
         t_0 = time.time()
-        t_stop = t_0 + 0.25
+        t_stop = t_0 + 0.21
         t_sensing = t_0 + 0.20  # was .25
         t1 = t_0
         
@@ -100,7 +100,7 @@ class Ostritch(Shelly):
     def __init__(self):
         self.prev_nearfield_count = 0
         self.prev_nearfield_avg_distance = 0
-        self.lidar = LidarSensor(8, 45)
+        self.lidar = LidarSensor(9, 45)
         
     
     def get_observation(self):
@@ -133,10 +133,12 @@ class TurtleEnv:
         angle_min = -1
         self.turtle.move(BaseTurtle.actions[action])
         observations = self.turtle.get_observation()
+        for obs in observations:
+            print('Heading = {0:+.3f}'.format(obs[0]),'Distance = {0:+.1f}'.format(obs[1]))
         state = np.argmin(observations[...,1])
         closest_obs = observations[state]
-        print(closest_obs)
-        reward = 180 - closest_obs[0]
+        print('Best heading:', closest_obs)
+        reward = 180 - abs(closest_obs[0])
         self.count += 1
         return state, reward, self.count > 12
 
@@ -144,7 +146,7 @@ class TurtleEnv:
         explore = 0.4
         alpha = 0.1
         gamma = 0.9
-        q = np.zeros((8, len(BaseTurtle.actions)))
+        q = np.zeros((9, len(BaseTurtle.actions)))
         for n in range(100):
             state = self.reset()
             done = False
@@ -158,6 +160,7 @@ class TurtleEnv:
                 state = obs
             explore *= 0.99
             print(q)
+            print("Explore rate: ,", explore)
     
 
 
@@ -165,7 +168,10 @@ s = TurtleEnv(turtle = Ostritch(), turn = 45, distance = 10)
 s.turtle.start()
 time.sleep(1)
 s.reset()
-s.learn()
+for n in range 20:
+    s.step(0)
+    time.sleep(1)
+#s.learn()
 s.turtle.stop()
 
 '''s = TurtleEnv(turtle = Ostritch(), turn = 45, distance = 10)
