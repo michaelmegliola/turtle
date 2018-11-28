@@ -138,7 +138,7 @@ class TurtleEnv:
         state = np.argmin(observations[...,1])
         closest_obs = observations[state]
         print('Best heading:', closest_obs)
-        reward = 180 - abs(closest_obs[0])
+        reward = pow(180 - abs(closest_obs[0]), 2)
         self.count += 1
         return state, reward, self.count > 12
 
@@ -156,7 +156,8 @@ class TurtleEnv:
                 else:
                     action = np.argmax(q[state])
                 obs, reward, done = s.step(action)
-                q[obs][action] = (1-alpha) * q[state][action] + alpha * reward
+                #q[obs][action] = (1-alpha) * q[state][action] + alpha * reward
+                q[obs][action] = (1-alpha) * q[state][action] + alpha * (reward + gamma * np.max(q[obs]))
                 state = obs
             explore *= 0.99
             print(q)
@@ -168,16 +169,14 @@ s = TurtleEnv(turtle = Ostritch(), turn = 45, distance = 10)
 s.turtle.start()
 time.sleep(1)
 s.reset()
-for n in range 20:
-    s.step(0)
-    time.sleep(1)
-#s.learn()
+s.learn()
 s.turtle.stop()
 
 '''s = TurtleEnv(turtle = Ostritch(), turn = 45, distance = 10)
+s.turtle.start()
 time.sleep(1)
 s.reset()
-s.turtle.make_observation()
-for obs in s.turtle.observation:
+observation = s.turtle.get_observation()
+for obs in observation:
     print('Heading = {0:+.3f}'.format(obs[0]),'Distance = {0:+.1f}'.format(obs[1]))
 s.turtle.stop()'''

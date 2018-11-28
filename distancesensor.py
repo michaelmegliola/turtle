@@ -14,16 +14,20 @@ class DistanceSensor:
         return self.stepper.position, self.read_distance()
         
     def read_distance(self):
+        distance_in_mm = 0
         self.lidar.start_ranging(3) # Start ranging, 1 = Short Range, 2 = Medium Range, 3 = Long Range
-        distance_in_mm = self.lidar.get_distance() # Grab the range in mm
+        for n in range(5):
+            distance_in_mm += self.lidar.get_distance()
+        distance_in_mm /= 5
         self.lidar.stop_ranging() # Stop ranging
         return distance_in_mm
     
     def get_observation(self):
         observation = []
-        target = -(self.sweep_count//2) * self.sweep_degrees  #forced integer math
+        target = 0
         for i in range(self.sweep_count):
             observation.append(self.get_reading(target))
+            print('Seeking ', target)
             target += self.sweep_degrees
         self.seek_position(0)
         return np.array(observation)
